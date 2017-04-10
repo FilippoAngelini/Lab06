@@ -10,6 +10,8 @@ public class Main extends Application {
 	@Override
 	public void start(Stage primaryStage) {
 		try {
+			Model model = new Model();
+			
 			FXMLLoader loader = new FXMLLoader(getClass().getResource("Meteo.fxml"));
 			BorderPane root = (BorderPane) loader.load();
 
@@ -18,6 +20,8 @@ public class Main extends Application {
 
 			MeteoController controller = loader.getController();
 			// TODO impostare il model nel controller
+			
+			controller.setModel(model);
 
 			primaryStage.setScene(scene);
 			primaryStage.show();

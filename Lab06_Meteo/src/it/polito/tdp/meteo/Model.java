@@ -3,6 +3,7 @@ package it.polito.tdp.meteo;
 import java.util.List;
 
 import it.polito.tdp.meteo.bean.SimpleCity;
+import it.polito.tdp.meteo.db.MeteoDAO;
 
 public class Model {
 
@@ -16,8 +17,10 @@ public class Model {
 	}
 
 	public String getUmiditaMedia(int mese) {
+		
+		MeteoDAO dao = new MeteoDAO();
 
-		return "TODO!";
+		return dao.getUmiditaMedia(mese);
 	}
 
 	public String trovaSequenza(int mese) {
