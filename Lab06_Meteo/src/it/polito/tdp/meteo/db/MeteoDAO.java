@@ -60,7 +60,7 @@ public class MeteoDAO {
 			
 			String ausilio = "";
 			
-			if(mese <= 10)
+			if(mese < 10)
 				ausilio = "0";
 			
 			String inizio = "2013" + ausilio + Integer.toString(mese) + "01";
