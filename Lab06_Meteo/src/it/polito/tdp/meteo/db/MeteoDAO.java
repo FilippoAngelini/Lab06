@@ -58,12 +58,12 @@ public class MeteoDAO {
 		try {
 			Connection conn = DBConnect.getInstance().getConnection();
 			PreparedStatement st = conn.prepareStatement(sql);
-			
+			/*
 			String ausilio = "";
 			
 			if(mese < 10)
 				ausilio = "0";
-			/*
+			
 			String inizio = "2013" + ausilio + Integer.toString(mese) + "01";
 			String fine = "2013" + ausilio + Integer.toString(mese) + "31";
 			
@@ -98,6 +98,36 @@ public class MeteoDAO {
 			
 			st.setString(1, Integer.toString(mese));
 			st.setString(2, Integer.toString(step));
+			ResultSet rs = st.executeQuery();
+			
+			List<Rilevamento> ris = new ArrayList<Rilevamento>();
+
+			while (rs.next()) {
+				
+				ris.add(new Rilevamento(rs.getString("Localita"),rs.getDate("Data"),rs.getInt("Umidita")));
+
+			}
+
+			conn.close();
+			
+			return ris;
+
+		} catch (SQLException e) {
+
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+	}
+
+	public List<Rilevamento> getRilevamentiMese(int mese) {
+		final String sql = "SELECT Localita, Data, Umidita FROM situazione WHERE MONTH(Data)=? ORDER BY Data ASC";
+
+		try {
+			Connection conn = DBConnect.getInstance().getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			
+			st.setString(1, Integer.toString(mese));
 			ResultSet rs = st.executeQuery();
 			
 			List<Rilevamento> ris = new ArrayList<Rilevamento>();

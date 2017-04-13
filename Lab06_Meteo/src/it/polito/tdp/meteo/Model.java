@@ -1,6 +1,7 @@
 package it.polito.tdp.meteo;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 import it.polito.tdp.meteo.bean.Rilevamento;
@@ -9,13 +10,16 @@ import it.polito.tdp.meteo.db.MeteoDAO;
 
 public class Model {
 
-	private final static int COST = 50;
+	private final static int COST = 100;
 	private final static int NUMERO_GIORNI_CITTA_CONSECUTIVI_MIN = 3;
 	private final static int NUMERO_GIORNI_CITTA_MAX = 6;
 	private final static int NUMERO_GIORNI_TOTALI = 15;
+	private double costoBest;
+	private List <Rilevamento> rilevamentiMese;
 
 	public Model() {
-
+		costoBest = 0;
+		rilevamentiMese = new ArrayList<Rilevamento>();
 	}
 
 	public String getUmiditaMedia(int mese) {
@@ -27,40 +31,71 @@ public class Model {
 
 	public String trovaSequenza(int mese) {
 		
+		MeteoDAO dao = new MeteoDAO();
+		
 		List <SimpleCity> parziale = new ArrayList<SimpleCity>();
 		List <SimpleCity> best = new ArrayList <SimpleCity>();
 		
+		rilevamentiMese = dao.getRilevamentiMese(mese);
+		
 		int step = 1;
 		
-		recursive(parziale,best,mese,step);
+		recursive(parziale,best/*,mese*/,step);
+		
+		String ris = best.toString() + "  Costo: " + costoBest + " €";
 
-		return best.toString();
+		return ris;
 	}
 	
-	public void recursive (List<SimpleCity> parziale, List<SimpleCity> best, int mese, int step){
+	public void recursive (List<SimpleCity> parziale, List<SimpleCity> best/*, int mese*/, int step){
 		
-		MeteoDAO dao = new MeteoDAO();
+		//MeteoDAO dao = new MeteoDAO();
 		
-		if(parziale.size()==NUMERO_GIORNI_TOTALI){
-			if(punteggioSoluzione(parziale)<punteggioSoluzione(best)){
+		if(parziale.size()==NUMERO_GIORNI_TOTALI && controllaParziale(parziale)){
+			//System.out.print(parziale);
+			//System.out.println("  " + punteggioSoluzione(parziale));
+			if(best.size()==0){
+				best.addAll(parziale);
+				costoBest = punteggioSoluzione(best);
+				System.out.print(best);
+				System.out.println("  " + costoBest);
+				return;
+			}
+			if(punteggioSoluzione(parziale)<costoBest){
 				best.clear();
 				best.addAll(parziale);
+				costoBest = punteggioSoluzione(best);
+				System.out.print(best);
+				System.out.println("  " + costoBest);
 			}
 			return;
 		}
 		
-		List <Rilevamento> rilevamentiGiorno = dao.getRilevamentiGiorno(mese,step);
+		//List <Rilevamento> rilevamentiGiorno = dao.getRilevamentiGiorno(mese,step);
 		
-		for(Rilevamento r : rilevamentiGiorno)
+		List <Rilevamento> temp = new ArrayList <Rilevamento>();
+		
+		for(Rilevamento r : rilevamentiMese){
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(r.getData());
+			if(cal.get(Calendar.DAY_OF_MONTH)==step)
+				temp.add(r);
+			if(cal.get(Calendar.DAY_OF_MONTH)>step)
+				break;
+		}
+			
+		
+		for(Rilevamento r : /*rilevamentiGiorno*/ temp){
+			//System.out.println(parziale);
 			if(controllaParziale(parziale)){
 				SimpleCity ct = new SimpleCity (r.getLocalita(),r.getUmidita());
 				parziale.add(ct);
-				step++;
-				recursive(parziale,best,mese,step);
-				parziale.remove(ct);
+				recursive(parziale,best/*,mese*/,step+1);
+				parziale.remove(parziale.size()-1);
 			}
 			else
 				return;
+		}
 	}
 
 	private Double punteggioSoluzione(List<SimpleCity> soluzioneCandidata) {
@@ -73,14 +108,14 @@ public class Model {
 		
 		for(int i = 1; i<soluzioneCandidata.size();i++)
 			if(!soluzioneCandidata.get(i).getNome().equals(soluzioneCandidata.get(i-1).getNome()))
-				score += 100;
+				score += COST;
 		
 		return score;
 	}
 
 	private boolean controllaParziale(List<SimpleCity> parziale) {
 		
-		if(parziale.size() > 15)
+		if(parziale.size() > NUMERO_GIORNI_TOTALI)
 			return false;
 		
 		int contaTorino=0;
@@ -96,7 +131,9 @@ public class Model {
 				contaGenova++;
 		}
 		
-		if(contaTorino>6 || contaMilano >6 || contaGenova >6)
+		if(contaTorino>NUMERO_GIORNI_CITTA_MAX || contaMilano >NUMERO_GIORNI_CITTA_MAX || contaGenova >NUMERO_GIORNI_CITTA_MAX)
+			return false;
+		if((parziale.size() == NUMERO_GIORNI_TOTALI) && (contaTorino==0 || contaMilano ==0 || contaGenova ==0))
 			return false;
 		/*
 		if(parziale.size()>=3)
@@ -119,13 +156,17 @@ public class Model {
 				return false;
 		}
 		*/
-		if(parziale.size()>=3){
-			int cont = 0;
+		if(parziale.size()>=NUMERO_GIORNI_CITTA_CONSECUTIVI_MIN){
+			int cont = 1;
 			for(int z = 0; z<parziale.size()-1;z++){
+				if(parziale.get(z).getNome().equals(parziale.get(z+1).getNome()))
+					cont++;
 				if(!parziale.get(z).getNome().equals(parziale.get(z+1).getNome()) && cont<3)
 					return false;
+				if((parziale.size() == NUMERO_GIORNI_TOTALI) && (!parziale.get(z).getNome().equals(parziale.get(z+1).getNome())) && z>=(parziale.size()-NUMERO_GIORNI_CITTA_CONSECUTIVI_MIN))
+					return false;
 				if(!parziale.get(z).getNome().equals(parziale.get(z+1).getNome()))
-					cont = 0;
+					cont = 1;
 			}
 		}
 		
